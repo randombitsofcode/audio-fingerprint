@@ -1,102 +1,78 @@
-var audioFingerprint = (function () {
-	
-	var context = null;
-	var currentTime = null;
-	var oscillator = null;
-	var compressor = null;
-	var fingerprint = null;
-	var callback = null
-	
-	function run(cb, debug = false) {
-		
-		callback = cb;
-		
-		try {
-			
-			setup();
-		
-			oscillator.connect(compressor);
-			compressor.connect(context.destination);
-		
-			oscillator.start(0);
-			context.startRendering();
-			
-			context.oncomplete = onComplete;
-		  
-		} catch (e) {
-			
-			if (debug) {
-				throw e;
-			}
-			
-		}
-	}
-	
-	function setup()
-	{
-		setContext();
-		currentTime = context.currentTime;
-		setOscillator();
-		setCompressor();
-	}
+export default class AFP {}
 
-	function setContext()
-	{
+AFP.context = null;
+AFP.currentTime = null;
+AFP.oscillator = null;
+AFP.compressor = null;
+AFP.fingerprint = null;
+AFP.callback = null;
+
+AFP.run = function( cb, debug = true ) {
+	AFP.callback = cb;
+	
+	try {
+		
+		AFP.setup();
+	
+		AFP.oscillator.connect( AFP.compressor );
+		AFP.compressor.connect( AFP.context.destination );
+	
+		AFP.oscillator.start( 0 );
+		AFP.context.startRendering();
+		
+		AFP.context.oncomplete = AFP.onComplete;
+	  
+	} catch ( error ) {
+		
+		if ( debug ) {
+			throw error;
+		}
+		
+	}
+};
+
+AFP.setup = function() {
 		var audioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-		context = new audioContext(1, 44100, 44100);
-	}
+		AFP.context = new audioContext( 1, 44100, 44100 );
+		AFP.currentTime = AFP.context.currentTime;
 
-	function setOscillator()
-	{
-		oscillator = context.createOscillator();
-		oscillator.type = "triangle";
-		oscillator.frequency.setValueAtTime(10000, currentTime);
-	}
+		AFP.oscillator = AFP.context.createOscillator();
+		AFP.oscillator.type = "triangle";
+		AFP.oscillator.frequency.setValueAtTime( 10000, AFP.currentTime );
 
-	function setCompressor()
-	{
-		compressor = context.createDynamicsCompressor();
+		AFP.compressor = AFP.context.createDynamicsCompressor();
 		
-		setCompressorValueIfDefined('threshold', -50);
-		setCompressorValueIfDefined('knee', 40);
-		setCompressorValueIfDefined('ratio', 12);
-		setCompressorValueIfDefined('reduction', -20);
-		setCompressorValueIfDefined('attack', 0);
-		setCompressorValueIfDefined('release', .25);
-	}
+		AFP.setCompressorValueIfDefined( "threshold", -50 );
+		AFP.setCompressorValueIfDefined( "knee", 40 );
+		AFP.setCompressorValueIfDefined( "ratio", 12 );
+		AFP.setCompressorValueIfDefined( "reduction", -20 );
+		AFP.setCompressorValueIfDefined( "attack", 0 );
+		AFP.setCompressorValueIfDefined( "release", .25 );
+};
 
-	function setCompressorValueIfDefined(item, value)
-	{
-		if (compressor[item] !== undefined && typeof compressor[item].setValueAtTime === 'function') {
-			compressor[item].setValueAtTime(value, context.currentTime);
-		}
+AFP.setCompressorValueIfDefined = function( item, value ) {
+	if ( AFP.compressor[ item ] !== undefined && typeof AFP.compressor[ item ].setValueAtTime === "function" ) {
+		AFP.compressor[ item ].setValueAtTime( value, AFP.context.currentTime );
 	}
-	
-	function onComplete(event)
-	{
-		generateFingerprints(event);
-	    compressor.disconnect();
-	}
-	
-	function generateFingerprints(event)
-	{
-		var output = null;
-		for (var i = 4500; 5e3 > i; i++) {
-			
-			var channelData = event.renderedBuffer.getChannelData(0)[i];
-			output += Math.abs(channelData);
-			
-		}
+};
+
+AFP.onComplete = function( event ) {
+	AFP.generateFingerprints( event );
+	AFP.compressor.disconnect();
+};
+
+AFP.generateFingerprints = function( event ) {
+	let output = null;
+	for ( let i = 4500; i < 5e3; i++ ) {
 		
-		fingerprint = output.toString();
+		var channelData = event.renderedBuffer.getChannelData( 0 )[ i ];
+		output += Math.abs( channelData );
 		
-		if (typeof callback === 'function') {
-			return callback(fingerprint);
-		}
 	}
 	
-	return {
-		run:run
-	};
+	AFP.fingerprint = output.toString();
 	
-})();
+	if ( typeof AFP.callback === "function" ) {
+		return AFP.callback( AFP.fingerprint );
+	}
+};
